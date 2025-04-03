@@ -31,10 +31,22 @@ app.use("/api/auth", authRoutes)
 app.use("/api/rooms", roomRoutes)
 app.use("/api/messages", messageRoutes)
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:8080",
+  process.env.CLIENT_URL,
+]
+
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true)
+      } else {
+        callback(new Error("Not allowed by CORS"))
+      }
+    },
     methods: ["GET", "POST"],
   },
 })
