@@ -18,8 +18,25 @@ dotenv.config()
 const app = express()
 const server = http.createServer(app)
 
+// Allowed origins for CORS
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.CLIENT_URL,
+]
+
 // Middleware
-app.use(cors())
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, origin)
+      } else {
+        callback(new Error("Not allowed by CORS"))
+      }
+    },
+    credentials: true,
+  })
+)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
@@ -30,12 +47,6 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 app.use("/api/auth", authRoutes)
 app.use("/api/rooms", roomRoutes)
 app.use("/api/messages", messageRoutes)
-
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:8080",
-  process.env.CLIENT_URL,
-]
 
 // Initialize Socket.io
 const io = new Server(server, {
@@ -48,6 +59,7 @@ const io = new Server(server, {
       }
     },
     methods: ["GET", "POST"],
+    credentials: true, // Allow credentials for WebSocket
   },
 })
 
@@ -59,8 +71,11 @@ io.on("connection", (socket) => handleConnection(io, socket))
 
 // Connect to MongoDB
 mongoose
-    .connect('mongodb+srv://portfolio:Sebastian2803@chat-portfolio.wiosuto.mongodb.net/?retryWrites=true&w=majority&appName=Chat-portfolio')  
-    .then(() => {
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => {
     console.log("Connected to MongoDB")
     // Start server
     const PORT = process.env.PORT || 5000
